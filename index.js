@@ -6,7 +6,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 const corsConfig = {
-  origin: ["http://localhost:5173"],
+  origin: ["http://localhost:5173","http://localhost:5174"],
   credentials: true,
 };
 app.use(cors(corsConfig));
@@ -36,6 +36,7 @@ async function run() {
     await client.connect();
 
     const addQueryCollection = client.db("APIS").collection("queries");
+    const recommendationCollection = client.db("APIS").collection("recommendation");
 
     // Adding   Quieries
     app.post("/queries", async (req, res) => {
@@ -61,6 +62,72 @@ async function run() {
       const result = await addQueryCollection.findOne();
       res.send(result);
     });
+
+    app.get("/details/:id", async (req, res) => {
+      const id = req.params.id;
+      //const query = { _id: new ObjectId(id) };
+      //const result = await placeCollection.findOne();
+      const result = await addQueryCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      console.log(result);
+      res.send(result);
+    });
+
+    app.put("/updateQuery/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedQuery = req.body;
+      console.log(updatedQuery);
+      const place = {
+        $set: {
+          product_name: updatedQuery.product_name,
+          brand_name: updatedQuery.brand_name,
+          product_image_url: updatedQuery.product_image_url,
+          query_title: updatedQuery.query_title,
+          alternation_reason: updatedQuery.alternation_reason,
+          posted_date: updatedQuery.posted_date,
+        },
+      };
+      try {
+        const result = await addQueryCollection.updateOne(
+          filter,
+          place,
+          options
+        );
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating place:", error);
+        res.status(500).send("Error updating place.");
+      }
+    });
+
+    app.delete("/queries/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await addQueryCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.post("/recommendation", async (req, res) => {
+      const recommendationQuery = req.body;
+      const result = await recommendationCollection.insertOne(recommendationQuery);
+      res.send(result);
+    });
+
+    //   Recomendation  Operations
+    // app.get("/recommendation/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   //const query = { _id: new ObjectId(id) };
+    //   //const result = await placeCollection.findOne();
+    //   const result = await addQueryCollection.findOne({
+    //     _id: new ObjectId(id),
+    //   });
+    //   console.log(result);
+    //   res.send(result);
+    // });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
