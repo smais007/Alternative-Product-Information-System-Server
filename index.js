@@ -6,7 +6,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 const corsConfig = {
-  origin: ["http://localhost:5173","http://localhost:5174"],
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   credentials: true,
 };
 app.use(cors(corsConfig));
@@ -36,7 +36,9 @@ async function run() {
     await client.connect();
 
     const addQueryCollection = client.db("APIS").collection("queries");
-    const recommendationCollection = client.db("APIS").collection("recommendation");
+    const recommendationCollection = client
+      .db("APIS")
+      .collection("recommendation");
 
     // Adding   Quieries
     app.post("/queries", async (req, res) => {
@@ -113,7 +115,15 @@ async function run() {
 
     app.post("/recommendation", async (req, res) => {
       const recommendationQuery = req.body;
-      const result = await recommendationCollection.insertOne(recommendationQuery);
+      const result = await recommendationCollection.insertOne(
+        recommendationQuery
+      );
+      res.send(result);
+    });
+
+    app.get("/recommendation", async (req, res) => {
+      const cursor = recommendationCollection.find();
+      const result = await cursor.toArray();
       res.send(result);
     });
 
