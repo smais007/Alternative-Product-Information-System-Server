@@ -21,7 +21,6 @@ app.use((req, res, next) => {
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.dmdmzzd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -32,7 +31,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
     const addQueryCollection = client.db("APIS").collection("queries");
@@ -67,8 +65,7 @@ async function run() {
 
     app.get("/details/:id", async (req, res) => {
       const id = req.params.id;
-      //const query = { _id: new ObjectId(id) };
-      //const result = await placeCollection.findOne();
+
       const result = await addQueryCollection.findOne({
         _id: new ObjectId(id),
       });
@@ -127,26 +124,24 @@ async function run() {
       res.send(result);
     });
 
-    //   Recomendation  Operations
-    // app.get("/recommendation/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   //const query = { _id: new ObjectId(id) };
-    //   //const result = await placeCollection.findOne();
-    //   const result = await addQueryCollection.findOne({
-    //     _id: new ObjectId(id),
-    //   });
-    //   console.log(result);
-    //   res.send(result);
-    // });
+    app.put("/recommendation/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const update = { $inc: { recomend_count: 1 } }; 
+      try {
+        const result = await addQueryCollection.updateOne(filter, update);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating recomend_count:", error);
+        res.status(500).send("Error updating recomend_count.");
+      }
+    });
 
-    // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
   }
 }
 run().catch(console.dir);
