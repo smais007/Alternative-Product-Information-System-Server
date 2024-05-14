@@ -6,7 +6,11 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 const corsConfig = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://apis-511ac.web.app",
+  ],
   credentials: true,
 };
 app.use(cors(corsConfig));
@@ -14,7 +18,11 @@ app.use(cors());
 app.use(express.json());
 
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "http://localhost:5173",
+    "https://apis-511ac.web.app"
+  );
   res.setHeader("Access-Control-Allow-Origin", "*");
   next();
 });
@@ -31,7 +39,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const addQueryCollection = client.db("APIS").collection("queries");
     const recommendationCollection = client
@@ -69,7 +77,7 @@ async function run() {
       const result = await addQueryCollection.findOne({
         _id: new ObjectId(id),
       });
-      console.log(result);
+
       res.send(result);
     });
 
@@ -124,10 +132,20 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/recommendation", async (req, res) => {
+      const email = req.url.split("=")[1];
+
+      if (!email) return res.send("Plz provide a user email");
+
+      const cursor = recommendationCollection.find({ use_email: email });
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     app.put("/recommendation/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      const update = { $inc: { recomend_count: 1 } }; 
+      const update = { $inc: { recomend_count: 1 } };
       try {
         const result = await addQueryCollection.updateOne(filter, update);
         res.send(result);
@@ -137,7 +155,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
