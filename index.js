@@ -2,30 +2,36 @@ const express = require("express");
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const app = express();
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
+// const corsConfig = {
+//   origin: [
+//     "http://localhost:5173",
+//     "http://localhost:5173",
+//     "https://apis-511ac.web.app",
+//   ],
+//   credentials: true,
+// };
+
 const corsConfig = {
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "https://apis-511ac.web.app",
-  ],
+  origin: "http://localhost:5173",
   credentials: true,
 };
 app.use(cors(corsConfig));
 app.use(cors());
 app.use(express.json());
-
+app.use(cookieParser());
 app.use((req, res, next) => {
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "http://localhost:5173",
-    "https://apis-511ac.web.app"
-  );
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   next();
 });
+app.options("*", cors(corsConfig));
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.dmdmzzd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -45,6 +51,33 @@ async function run() {
     const recommendationCollection = client
       .db("APIS")
       .collection("recommendation");
+    // JWT Acces Token
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      console.log("user from token", user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
+        expiresIn: "1h",
+      });
+
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ success: true });
+    });
+
+    // app.post("/logout", async (res, req) => {
+    //   const user = req.body;
+    //   console.log("login user out", user);
+    //   res.clearCookie("token").send({ success: true });
+    // });
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("login user out", user);
+      res.cookie("token", "", { expires: new Date(0) }).send({ success: true });
+    });
 
     // Adding   Quieries
     app.post("/queries", async (req, res) => {
@@ -120,6 +153,7 @@ async function run() {
 
     app.post("/recommendation", async (req, res) => {
       const recommendationQuery = req.body;
+      // console.log("coooooooookies", req.cookies);
       const result = await recommendationCollection.insertOne(
         recommendationQuery
       );
@@ -127,17 +161,15 @@ async function run() {
     });
 
     app.get("/recommendation", async (req, res) => {
-      const cursor = recommendationCollection.find();
+      const email = req.url.split("=")[1];
+      if (!email) return res.send("Plz provide a user email");
+      const cursor = recommendationCollection.find({ use_email: email });
       const result = await cursor.toArray();
       res.send(result);
     });
 
     app.get("/recommendation", async (req, res) => {
-      const email = req.url.split("=")[1];
-
-      if (!email) return res.send("Plz provide a user email");
-
-      const cursor = recommendationCollection.find({ use_email: email });
+      const cursor = recommendationCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
