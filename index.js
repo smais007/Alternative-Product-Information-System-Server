@@ -151,12 +151,10 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/recommendation", async (req, res) => {
-      const recommendationQuery = req.body;
-      // console.log("coooooooookies", req.cookies);
-      const result = await recommendationCollection.insertOne(
-        recommendationQuery
-      );
+    app.get("/recommendation", async (req, res) => {
+      console.log("cokkieeeeeee", req?.cookies);
+      const cursor = recommendationCollection.find();
+      const result = await cursor.toArray();
       res.send(result);
     });
 
@@ -168,9 +166,11 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/recommendation", async (req, res) => {
-      const cursor = recommendationCollection.find();
-      const result = await cursor.toArray();
+    app.post("/recommendation", async (req, res) => {
+      const recommendationQuery = req.body;
+      const result = await recommendationCollection.insertOne(
+        recommendationQuery
+      );
       res.send(result);
     });
 
