@@ -7,30 +7,49 @@ const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
-// const corsConfig = {
-//   origin: [
-//     "http://localhost:5173",
-//     "http://localhost:5173",
-//     "https://apis-511ac.web.app",
-//   ],
-//   credentials: true,
-// };
-
 const corsConfig = {
-  origin: "http://localhost:5173",
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5173",
+    "https://apis-511ac.web.app",
+  ],
   credentials: true,
 };
-app.use(cors(corsConfig));
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    // Allow requests from specified origins
+    const allowedOrigins = [
+      "http://localhost:5173",
+      "https://apis-511ac.web.app",
+    ];
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
+// const corsConfig = {
+//   origin: "http://localhost:5173",
+//   credentials: true,
+// };
 app.use(cors());
+app.use(cors(corsConfig));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+//   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+//   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+//   res.setHeader("Access-Control-Allow-Credentials", "true");
+//   next();
+// });
 app.options("*", cors(corsConfig));
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.dmdmzzd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -42,6 +61,29 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+// middelwire
+const logger = (req, res, next) => {
+  console.log("log: info", req.method, req.url);
+  next();
+};
+
+//Token  verification
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  // console.log("token in the middelware", token);
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorize access" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unauthorize access" });
+    }
+    req.user = decoded;
+    next();
+  });
+  // next();
+};
 
 async function run() {
   try {
@@ -152,7 +194,15 @@ async function run() {
     });
 
     app.get("/recommendation", async (req, res) => {
-      console.log("cokkieeeeeee", req?.cookies);
+      // console.log("token owner info", req.user);
+      // let query = {};
+      // if (req.user.email !== req.query.email) {
+      //   return res.status(403).send({ message: "Forbidden access" });
+      // }
+      // if (req.query?.email) {
+      //   query = { email: req.query.email };
+      //   console.log("Query email", query);
+      // }
       const cursor = recommendationCollection.find();
       const result = await cursor.toArray();
       res.send(result);
